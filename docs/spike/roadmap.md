@@ -103,68 +103,28 @@ the amended criterion applied honestly.
 
 ---
 
-## 7. Live roadmap — open-source SDLC knowledge graph
+## 7. Live roadmap — moved
 
-Target and architecture: [`product-proposal.md`](product-proposal.md).
-Derivability data: [`sdlc-model.md`](sdlc-model.md) §4.
+**Superseded by [`../roadmap.md`](../roadmap.md)**, the build tracking document.
 
-`INFERENCE` Phased by measured derivability, not by product narrative. Each phase
-must yield a graph that answers real questions on its own — a graph that is only
-useful once all connectors exist is a graph nobody adopts.
+`INFERENCE` Two corrections were made after this section was first written, both
+from sponsor challenge plus measurement, and both are reflected there:
 
-### Phase A — Gherkin spine (weeks 0–6)
+1. **Platform-first, not slice-first.** The phased slices here read as though the
+   platform grew incrementally, which violates the architecture rule that adding
+   a connector must never change core. The platform is complete at M0; connectors
+   plug in afterwards. Anything touching the data model or trust boundary —
+   tenancy, audit, provenance — is expensive to retrofit and belongs in M0.
+2. **Code first, not Gherkin first.** This section opened with a Gherkin spine.
+   `FACT` 0 of 19 clones contain any `.feature` file. Ordering now follows how
+   reliably the source data exists: code (100%) → git (99.5%) → tracker (48%) →
+   test (66%) → Gherkin (unmeasured) → runtime.
 
-Parse feature files to an AST; build `Scenario → step → test → run`; bind runs to
-merge commits. Ship the MCP query surface and CLI with this.
-
-| Metric | Target | Why |
-|---|---|---|
-| Scenario→step extraction | > 95% `EXTRACTED` | Gherkin has a grammar; anything lower is a parser bug |
-| step→test binding without hand annotation | > 60% | Below this, the annotation-burden problem returns |
-| Time to first useful query | < 1 index run | The advantage over graph products that need weeks |
-
-**Kill:** step→test binding needs hand annotation in the majority of cases. That
-is the failure mode that killed Concept 3 and it must not be re-imported.
-
-### Phase B — Delivery spine (weeks 6–12)
-
-`PR → merge commit → release`, keyed on the merge commit. `FACT` Expect ~99.5%
-and ~92.9% respectively; treat materially lower as an integration defect.
-
-**Kill:** none expected — this is the highest-confidence data in the corpus. If it
-underperforms, the extraction is wrong, not the thesis.
-
-### Phase C — Tracker spine + governance (months 3–6)
-
-`commit/PR → work item`, `issue → epic`. Then the first policy checks, evaluated
-from the base branch, exposed as an advisory check before any blocking one.
-
-| Metric | Target |
-|---|---|
-| work-item edge coverage | > 45% median (measured baseline 48.1%) |
-| policy false-block rate | < 2% |
-| policy still enabled at day 30 | > 80% of pilots |
-
-**Kill:** `UNVERIFIED` → `FACT` moment. If real enterprise Jira estates do not
-carry individually addressable acceptance criteria at a useful rate, the intent
-tier has no left-hand nodes and the graph degrades to git/tracker plumbing that
-GitHub and Jira already render. This is the **single most important measurement
-in the whole plan** and should be run against a real customer estate as early as
-phase A, not deferred to phase C.
-
-### Phase D — Runtime loop (months 6–9)
-
-`release → incident`, comparing predicted with actual impact. `FACT` No competitor
-in this spike does this at all.
-
-**Kill:** if predicted-vs-actual cannot beat a naive baseline (e.g. "the services
-whose code changed"), the loop is decoration.
-
-### Phase E — Prose tier (months 9+)
-
-Confluence, ADR, PRD. Irreducibly `INFERRED`, always labelled, never default in a
-query result. Ship last deliberately: this is where every competitor starts and is
-why the category is mistrusted.
+`INFERENCE` The second correction generalises into a finding worth stating
+plainly: every intent artifact this design relies on — ADR, PRD, acceptance
+criteria, Gherkin — is absent from 100% of the repositories measured. Explaining
+that away as corpus bias once was reasonable; doing it twice would be motivated
+reasoning. It is carried as open questions Q1 and Q2 in the build roadmap.
 
 ## 8. Kill criteria for the whole programme
 
