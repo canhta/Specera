@@ -114,3 +114,62 @@ mistrusted). The greenfield mode is the smaller market and the easier problem, a
 it is the mode in which stage 4 — the one uncontested stage — is most valuable.
 This tension is carried into [`product-concepts.md`](product-concepts.md) and is
 not resolved here.
+
+## 4. Edge derivability — measured
+
+`FACT` Round 3 measured which lifecycle edges can be derived mechanically, over
+39,703 commits, 4,491 merged PRs, 3,252 issues, 1,917 docs and 4,596 test files
+across 19 repositories plus one live Jira. Method and commands:
+[`.spike/round3-sdlc-graph.md`](../../.spike/round3-sdlc-graph.md).
+
+**DETERMINISTIC** — parseable and verifiable, no model:
+
+| Edge | Coverage |
+|---|---|
+| code → code (structural) | ~107k edges |
+| PR → merge commit | **99.5%** |
+| release → commit set | **100%** (16/19 repos tagged) |
+| PR → release | **92.9%** pooled, 93.3% median |
+| issue → parent / epic | **89%** in Jira · 1.5% on GitHub Issues |
+| issue ↔ issue cross-reference | 53.3% median |
+
+**PARTIAL** — deterministic when a convention is followed; the number is the
+follow rate, not an error rate:
+
+| Edge | Coverage |
+|---|---|
+| test → module | 65.9% pooled, 80% median (fan-out 1.7); **coverage data present in 0/19** |
+| commit → work item | 21.1% pooled, **48.1% median**; 92% of extracted tokens resolve |
+| PR → issue | 17.1% resolved, 64.7% carry no reference |
+| doc → code (by path) | 49.3% of tokens resolve |
+
+**INFERRED-ONLY** — no mechanical derivation exists:
+
+| Edge | Why |
+|---|---|
+| doc → code (by symbol) | 84.7% of symbols have no resolvable definition |
+| ADR → code · requirement → code · requirement → test · incident → release · PRD → work item | **0/19 — the left-hand node does not exist in the corpus** |
+
+`FACT` Ratio: **72:28 EXTRACTED:INFERRED** across the whole graph; **36:64** in
+the non-code half; **0:100** in the intent tier.
+
+`INFERENCE` Two readings of the intent-tier zero, and the difference matters. It
+is a property of the *corpus*, not of the mechanism: open-source repositories do
+not write PRDs, ADRs or acceptance criteria and do not use Jira, while the same
+measurement against a live Jira returned 89% deterministic epic edges. The honest
+conclusion is conditional — where an organisation produces intent artifacts the
+chain is derivable, and where it does not there is nothing to connect.
+
+`INFERENCE` **Gherkin is the exception that carries the intent tier.** It is the
+only intent artifact with a grammar: acceptance criteria, ADRs and PRDs are prose
+and can only be `INFERRED`, whereas `Feature` / `Scenario` / `Given-When-Then`
+parses to an AST and is `EXTRACTED`. That makes
+`Scenario → step definition → test → run → commit → merge commit → release`
+deterministic almost end to end, with `AC → Scenario` the single human or model
+step — and it occurs once at authoring time rather than on every run, which is
+where stage 2's gate belongs.
+
+`INFERENCE` Because provenance permits bailing out instead of guessing, the
+failure mode here is **coverage, not precision** — sparse but true. That is what
+separates this from the ~33%-precision category in
+[`comparison.md`](comparison.md) §3.

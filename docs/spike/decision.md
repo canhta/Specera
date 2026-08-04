@@ -1,11 +1,20 @@
-# Decision — no-go on the proposed platform
+# Decision
 
-**Verdict: NO-GO** for Specera as scoped, after two rounds.
-Date 2026-08-04. Coordinator, on the evidence below.
+**Two verdicts, against two different targets.**
 
-`plan.md` permitted three rounds. Round 3 was not run because round 2 produced a
-determinate answer; a further round would have been spent looking for a reason to
-proceed, which is not what the loop is for.
+| Target | Verdict | Where |
+|---|---|---|
+| Evidence / gate / compliance platform (Concepts 1–3) | **NO-GO** | §1–§5, rounds 1–2 |
+| **SDLC knowledge graph, open source** (re-specified by sponsor after round 2) | **CONDITIONAL GO** | §7, round 3 |
+
+Date 2026-08-04. Coordinator, on the evidence below. All three permitted rounds
+were used.
+
+`INFERENCE` The two verdicts are not in tension. Rounds 1–2 tested a product that
+sells *assurance* and found the sellable claims already sold and the unsold claim
+untruthful. Round 3 tested a different product that provides *a queryable graph*
+and found the space genuinely unoccupied. The no-go below stands against what it
+tested and should not be cited against the round-3 target.
 
 ## 1. The decision
 
@@ -206,3 +215,77 @@ agent that checked instead of agreeing.
 `INFERENCE` A spike that produces a no-go in two rounds, for reasons that can be
 checked by a reader who disagrees, is a cheaper outcome than a build that
 discovers §2.1 in month nine.
+
+---
+
+## 7. Round 3 — the re-specified target: CONDITIONAL GO
+
+After round 2 the sponsor re-specified the target as **"Graphify, but for the
+whole SDLC"** — an open-source, single-source-of-truth knowledge graph and
+governance layer over Jira, Confluence, GitHub, Gherkin, Grafana and MCP, for
+agents and humans. `INFERENCE` Rounds 1–2 never evaluated this. All three
+concepts drifted toward evidence and gates; the graph-as-product framing was a
+coordinator framing error, recorded here rather than quietly fixed.
+
+Round 3 measured the only question that decides it: **which non-code edges can be
+derived deterministically?** Full measurements — 39,703 commits, 4,491 merged PRs,
+3,252 issues, 1,917 docs, 4,596 test files, 19 repos plus one live Jira — in
+[`.spike/round3-sdlc-graph.md`](../../.spike/round3-sdlc-graph.md). The edge
+classification is reproduced in [`sdlc-model.md`](sdlc-model.md) §4.
+
+### 7.1 What decided it
+
+`FACT` **The space is unoccupied.** Graphify ships **no SDLC graph at all**: zero
+Jira references in its tree, `prs.py` contains no `add_edge` call, and the node
+vocabulary is still six file types. Its "codebases, documentation, and Jira"
+positioning is not in the open-source product. Rovo's Teamwork Graph is
+Atlassian's equivalent but is EAP, may not be deployed to production or
+distributed, retains 90 days, and returned only `AtlassianUser` edges under
+first-hand test.
+
+`FACT` **The failure mode is coverage, not precision.** EXTRACTED:INFERRED is
+**72:28** across the whole graph. Because provenance tagging permits bailing out
+rather than guessing, the result is *sparse but true* — it does **not** inherit
+the ~33% precision trap in [`comparison.md`](comparison.md) §3. This is the single
+most important difference between this target and the rejected ones.
+
+`FACT` **Round 2's SHA problem does not apply here.** Merge commits resolve at
+**99.5%**, against 19.83% head-SHA survival. Keying on the merge commit rather
+than the head SHA rescues the design.
+
+### 7.2 The condition
+
+`FACT` The intent tier measured **0:100** — ADR→code, requirement→code,
+requirement→test, incident→release and PRD→work item all have zero left-hand
+nodes across 19 repositories.
+
+`INFERENCE` **That number is about the corpus, not the mechanism**, and the
+coordinator disagrees with the round-3 agent's reading of it. Open-source repos do
+not write PRDs, ADRs or acceptance criteria, and do not use Jira. The same agent
+measured a live Jira at **89% deterministic** issue→epic edges. The honest
+statement is therefore conditional: **the graph's value depends on the
+organisation actually producing intent artifacts.** Where they exist, the chain is
+derivable; where they do not, there is nothing to connect and the product degrades
+to git/tracker plumbing that GitHub and Jira already render.
+
+`INFERENCE` **Gherkin is the load-bearing exception and the strongest element of
+the sponsor's specification.** It is the only intent artifact with a grammar:
+acceptance criteria, ADRs and PRDs are prose and can only be `INFERRED`, whereas
+`Feature` / `Scenario` / `Given-When-Then` parses to a real AST and is
+`EXTRACTED`. The chain `Scenario → step definition → test → run → commit → merge
+commit → release` is deterministic almost end to end. Only `AC → Scenario`
+requires a human or a model — and that step happens once at authoring time, not
+on every run, which makes it the correct place for a human gate.
+
+### 7.3 Verdict
+
+**Conditional go**, on the target as re-specified, open source, with the
+conditions: build the graph as source of truth for **edges** rather than nodes
+(nodes stay owned by Jira, GitHub and Grafana, mirrored with provenance and TTL);
+tag every edge `EXTRACTED` / `INFERRED` / `AMBIGUOUS` and **filter to
+high-confidence at query time by default**, which no engine in this spike does;
+key artifacts to the merge commit; and sequence Gherkin first, because it is the
+only mechanically parseable bridge from intent to execution.
+
+Architecture and first slice: [`product-proposal.md`](product-proposal.md).
+Phasing and kill criteria: [`roadmap.md`](roadmap.md).

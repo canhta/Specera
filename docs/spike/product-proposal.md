@@ -1,124 +1,131 @@
-# Product proposal — the surviving concept, at surviving scope
+# Product proposal — Specera, an open-source SDLC knowledge graph
 
-**Status: conditional and unfunded.** Round 1 scored every concept below a
-funding bar ([`evaluation.md`](evaluation.md): 2.8 / 4.1 / 3.8 out of 10) and
-returned **pivot**. This document states what remains defensible *if* the phase-0
-kill tests in [`roadmap.md`](roadmap.md) pass. It is not a recommendation to
-build today. The go/pivot/no-go call is in [`decision.md`](decision.md).
+**Target, as re-specified by the sponsor after round 2:** Graphify's mechanism —
+deterministic extraction, provenance on every edge, MCP-queryable, no vector
+store — applied to the **whole product lifecycle** rather than code alone. Open
+source. The single source of truth and governance centre for SDLC data, for
+agents and humans, across Jira, Confluence, GitHub, Gherkin, Grafana and MCP.
 
-## 1. Selected concept
+Verdict: **conditional go** ([`decision.md`](decision.md) §7). The earlier no-go
+in §1–§5 applies to the evidence/gate/compliance products of rounds 1–2 and does
+not apply here.
 
-**Concept 3, Executable Acceptance Evidence — pivoted and reduced.**
+## 1. The architectural decision that governs everything else
 
-`INFERENCE` Selected by elimination rather than merit. Concept 1 scored 2.8 and
-carries remote code execution inside its own minimum viable product
-([`security.md`](security.md)). Concept 2 fails the compounding-advantage gate
-because its evidence is re-derivable from the repository without the vendor —
-which is the same sentence as "nothing accumulates on the vendor side" — and
-`FACT` 0 of 19 clones contain an ADR *or* configure a free architecture linter.
-Concept 3 survives the letter of the gate and fails its spirit. The C2/C3 ordering
-is a 0.3 gap and is **not robust**; the honest reading is that none of the three
-earned funding, and C3 is merely the cheapest to disprove.
+`INFERENCE` Specera is the source of truth for **edges**, not for **nodes**.
 
-**The pivot, stated precisely.** Round 1 aimed C3 at Atlassian and GitHub. That
-was the wrong target. `FACT` Rovo ships requirement *detection* and not
-*evidence*, and that asymmetry is explainable by Atlassian's own constraints —
-liability over an unverifiable link, 90-day retention economics, per-author
-pricing that resists a blocking control. `FACT` Xray has none of those
-constraints and already ships four of C3's five steps: `@Requirement("KEY-123")`
-as a free EPL-2.0 JUnit annotation, JUnit XML import from CI, a `Revision` field
-for the git commit, and coverage computed from executed runs
-([`.spike/verification-coordinator.md`](../../.spike/verification-coordinator.md) §3).
-The competitor is Xray and Zephyr Scale, not Rovo and Duo.
+[`sdlc-model.md`](sdlc-model.md) fixes Jira as the system of record for work and
+requirements and GitHub for code, PR and release. A product that tries to *own*
+tickets fights Jira, loses, and spends its life on two-way sync, write conflicts
+and drift — the standard death of a "single pane of glass".
 
-## 2. What may be claimed, and what may not
+| Layer | Owner | Specera's role |
+|---|---|---|
+| Ticket, epic, acceptance criterion | Jira | mirror + reference, with provenance and freshness TTL |
+| Code, PR, merge commit, release | GitHub | mirror + reference |
+| Metric, alert, incident | Grafana / on-call tooling | mirror + reference |
+| Feature file, scenario, step | the repository | **parse** — Gherkin has a grammar |
+| **Every relationship between the above** | **nobody today** | **owns outright** |
 
-`FACT` [`security.md`](security.md) establishes that no design in this spike — or
-in any competitor's — can prove that a passing test exercises the criterion it
-claims to cover. `def test_ac2(): assert True` plus a `@covers` annotation yields
-a valid, signed, reproducible green gate, and the forgery is cheaper than
-compliance.
+`INFERENCE` This is not a hedge; it is the actual gap. No system today owns
+`AC → Scenario → step → test → run → commit → merge commit → release → incident`.
+Atlassian sees the left, GitHub the middle, Grafana the right. Owning the edges is
+additive to all three, never in conflict, and needs no write access to any system
+of record. It also makes the sync model trivial: Specera never overwrites Jira.
 
-| May be sold | May **not** be sold |
-|---|---|
-| Tamper-evident attribution: *who* asserted that this test covers this criterion | "Proof that this requirement was tested" |
-| Provenance of an execution: this named test ran, at this commit, in this run | "Audit-grade verification of requirement coverage" |
-| A merge gate that blocks when the record is empty | Any claim implying semantic correspondence between test and criterion |
-| Retention beyond the incumbents' windows | Compliance attestation |
+## 2. Non-negotiable mechanics
 
-`INFERENCE` This is the central commercial problem, not a footnote: the claim
-that carries the price is the one that cannot be made truthfully. A product sold
-on the left column is a workflow tool competing with Xray on convenience. Selling
-the right column would be an audit-fraud instrument.
+Four, each answering a specific measured finding.
 
-## 3. Architecture, at reduced scope
+1. **Provenance on every edge** — `EXTRACTED` / `INFERRED` / `AMBIGUOUS`, as
+   Graphify does (`graphify/validate.py:5`). An edge read from an AST and an edge
+   guessed by a model must never be the same row.
+2. **Confidence filtering at query time, high-confidence by default.** `FACT` No
+   engine in this spike does this: codegraph discards confidence at write time;
+   codegraphcontext and stakgraph store it and never read it — 0 hits for a
+   threshold against 25 unfiltered `[:CALLS|HEURISTIC_CALLS]` traversals. Opting
+   into low-confidence edges must be explicit and labelled in the answer.
+3. **Artifacts keyed to the merge commit**, not the head SHA. `FACT` Head SHAs
+   survive 19.83% of merges (25.0% in a mature corpus, median repo 0%); merge
+   commits resolve at 99.5%.
+4. **Bail out rather than guess.** `FACT` The measured failure mode is coverage,
+   not precision — 72:28 EXTRACTED:INFERRED. Sparse-but-true is what keeps this
+   out of the ~33%-precision category that
+   [`comparison.md`](comparison.md) §3 shows reviewers already distrust.
 
-Five components. `FACT` Everything else in the round-1 proposal is cut per
-[`red-team.md`](red-team.md) and [`roadmap.md`](roadmap.md) phase 1.
+## 3. Ontology
 
-1. **Criterion extractor** — segments individually addressable acceptance criteria
-   from Jira work items into stable `KEY.AC-n` identifiers. Deterministic parsing,
-   no model.
-2. **Binding resolver** — associates criteria with tests. `INFERENCE` The design
-   hinges on this being derivable *without* developer annotation, via per-test
-   coverage contexts (`pytest --cov-context=test`, `vitest --coverage`)
-   intersected with PR-changed files. `FACT` 0/19 clones use any requirement↔test
-   annotation today, so an annotation-dependent design is an adoption bet the
-   evidence does not support. Phase-0 test 0.2 decides this.
-3. **CI collector** — ingests JUnit XML and coverage output, records test node id,
-   outcome, run id, artifact digest, and commit.
-4. **Append-only ledger** — the evidence store. Keyed by `(work item key, commit
-   SHA)` with a **tree-digest fallback**, because `UNVERIFIED` between 6/19 and
-   13/19 of repositories rewrite the head SHA at merge, orphaning any artifact
-   keyed to it alone.
-5. **Customer-side verifier** — the required status check. `FACT`
-   [`security.md`](security.md) §2.4: a GitHub required check trusts the API call
-   that sets it, not any signature, so a vendor-posted check is decorative with
-   respect to merge permission. The gate must be a verifier running in the
-   customer's CI against a customer-held trust root.
+`FACT` Start from **potpie's SDLC ontology** — Apache-2.0, 24 entity types, 26
+predicates, 15 agent-writable record types, with per-entity freshness TTLs,
+source-of-truth classes and evidence strengths already modelled
+(`potpie/context-core/src/potpie_context_core/ontology.py`). It is the closest
+existing artifact to this target and it is legally reusable. Do not re-derive it.
 
-**Integrate, do not build** ([`comparison.md`](comparison.md) §5 licence verdicts
-are binding): zoekt (Apache-2.0) and serena `solidlsp` (MIT) if a symbol layer is
-ever needed; Jira's **Builds API** (`/rest/builds/0.1/bulk`, which carries the
-typed `testInfo` object) for writing outcomes back — *not* the Development
-Information API, which carries branches, commits, and PRs only.
+`INFERENCE` Extend it with the node types Graphify's own vocabulary lacks —
+`Requirement`, `AcceptanceCriterion`, `Scenario`, `Step`, `Release`, `Incident` —
+and with the `EXTRACTED`/`INFERRED`/`AMBIGUOUS` provenance enum on every edge.
 
-**Explicitly excluded:** Sigstore/Rekor — `FACT` [`security.md`](security.md) §2.5
-shows the keyless-identity fix and the public-log fix conflict, because a Fulcio
-certificate embeds the CI OIDC subject containing the repository path, so a public
-log emits a timestamped feed of private repository names. Publicly verifiable,
-non-repudiable, confidential: pick two, and say which two.
+Legally binding constraints from [`comparison.md`](comparison.md) §5: **GitNexus
+is study-only** (PolyForm Noncommercial), **stakgraph is unusable** (no licence),
+**sourcebot is reject** (FSL competing-use). Anything borrowed from bloop must
+come from HEAD, never history.
 
-## 4. The gate
+## 4. Build order — deterministic first
 
-`INFERENCE` **Default to coverage-*delta*, not absolute coverage.** At a measured
-32–34% median test-touch rate with 9–10 of 19 repositories below 35%, an absolute
-gate fails on installation day, gets disabled, and then produces no evidence at
-all. A delta gate — "this change did not reduce criterion coverage" — is
-enforceable in a repository that starts at 20%.
+`INFERENCE` Sequence by measured derivability
+([`sdlc-model.md`](sdlc-model.md) §4), not by product narrative. Each slice must
+produce a queryable graph on its own.
 
-Human approval gates remain per [`sdlc-model.md`](sdlc-model.md): the gate blocks
-on an *empty record*, never on a model's judgement of quality. No LLM is in the
-enforcement path in phase 1.
+| # | Slice | Why here | Derivability |
+|---|---|---|---|
+| 1 | **Gherkin spine** — parse feature files; `Scenario → step → test → run` | The only intent artifact with a grammar; the bridge from intent to execution | `EXTRACTED` |
+| 2 | **Delivery spine** — `PR → merge commit → release` | Highest-confidence non-code edges available | 99.5% / 92.9% |
+| 3 | **Tracker spine** — `commit/PR → work item`, `issue → epic` | Deterministic when the convention is followed | 48.1% median · 89% in Jira |
+| 4 | **Code layer** — integrate, do not build: zoekt (Apache-2.0) for lexical, serena `solidlsp` (MIT) for compiler-grade symbols | Solved elsewhere; reimplementing wastes months | `EXTRACTED` |
+| 5 | **Runtime loop** — `release → incident`, predicted vs actual impact | `FACT` No competitor does this at all | mixed |
+| 6 | **Prose tier** — Confluence, ADR, PRD | Irreducibly `INFERRED`; ship last, always labelled | `INFERRED` |
 
-## 5. Greenfield versus maintenance
+`INFERENCE` Slices 1–3 are the product. Slice 5 is the differentiator nobody has.
+Slice 6 is where every competitor starts and is the reason they are mistrusted.
 
-`INFERENCE` Phase 1 targets **maintenance** on GitHub + Jira estates that already
-run CI with JUnit-format output. Greenfield waits: [`sdlc-model.md`](sdlc-model.md)
-§3 establishes they are different lifecycles with different cold-start problems,
-and the greenfield entry ritual is a second onboarding product. Building both is
-two roadmaps and should not be assumed free.
+## 5. Surfaces
 
-## 6. What would make this a real product
+- **MCP server** — the primary interface, for coding agents and IDEs. Query
+  surface must expose provenance so an agent can distinguish ground truth from
+  guess, and must default to high-confidence.
+- **CLI** — local-first, no account required to index a repo, following
+  Graphify's zero-egress posture.
+- **Read-only connectors** for Jira, GitHub and Grafana. `FACT` Jira's write path,
+  if ever needed, is the **Builds API** (`/rest/builds/0.1/bulk`, carries typed
+  `testInfo`) — not the Development Information API, which carries only branches,
+  commits and PRs.
 
-`FACT` Per [`plan.md`](plan.md)'s amended kill criterion, a merge gate plus
-retention is a head start, and time-to-market is explicitly not a moat. The only
-candidate compounding asset identified in round 1 that a single vendor cannot
-close by shipping a feature is **cross-tracker, cross-repository evidence** —
-Atlassian sees Jira, GitHub sees code, and neither sees both. Everything else on
-this page is convenience that Xray could match.
+`INFERENCE` Connectors must be plugins behind a stable contract. If the core has
+to change to add a connector, the architecture is wrong — that is how a
+six-connector list becomes an unmaintainable surface.
 
-`INFERENCE` If phase 0 shows Xray already validates its `Revision` field or offers
-any blocking gate, the residue is empty and the correct answer is no-go. That
-test costs one week of reading documentation and should be run before anything is
-built.
+## 6. Governance is the product
+
+`INFERENCE` The graph is substrate. What people adopt is **policy over the
+graph**: "no release with an acceptance criterion that has no scenario", "a PR
+touching this service requires an ADR", "every incident traces to a release".
+Nobody ships this because nobody has an end-to-end graph to run policy on.
+
+Policy must be evaluated from the **base branch**, not the head — `security.md`
+§8 established that a rule living in the PR under review can be deleted by the PR
+that violates it. And per `security.md` §2.4, any merge-blocking check must be a
+verifier the customer runs against their own trust root; a vendor-posted check
+proves nothing.
+
+## 7. Open questions carried into the build
+
+- `UNVERIFIED` Do enterprise Jira estates carry structured, individually
+  addressable acceptance criteria at a useful rate? One live Jira showed
+  structured `## Acceptance Criteria` blocks; n=3 is an anecdote. This is the
+  adoption condition in [`decision.md`](decision.md) §7.2 and the first thing to
+  measure with a real customer.
+- `UNVERIFIED` Whether `AC → Scenario` authoring is acceptable to teams as a
+  human gate, or whether it is the annotation-burden problem in a new costume.
+- `FACT` Storage is undecided. Graphify's `graph.json` + NetworkX cannot serve
+  concurrent multi-user queries; Neo4j constrains self-hosting and licensing.
+  This must be settled before slice 2.
