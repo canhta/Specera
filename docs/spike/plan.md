@@ -157,4 +157,5 @@ outcome, and a reader must be able to disagree with it.
 [`evaluation.md`](evaluation.md) ·
 [`product-proposal.md`](product-proposal.md) ·
 [`roadmap.md`](roadmap.md) ·
-[`decision.md`](decision.md)
+[`decision.md`](decision.md) ·
+[`stack.md`](stack.md)
