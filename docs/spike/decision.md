@@ -37,6 +37,29 @@ section identified as the only plausible one, inside Jira, today. The round-2
 thresholds did not anticipate it, which is a limitation of the thresholds rather
 than a reason to discount the finding.
 
+**Correction, post-decision recheck**
+([`.spike/recheck-vera.md`](../../.spike/recheck-vera.md)): the paragraph above
+*understated* Vera. `FACT` Vera hashes as well as signs — its architecture spec
+documents a Signatures module that "Applies 21 CFR Part 11 complaint signature
+and hash" and a Verification module that verifies "records and signatures against
+record and signature hash", and its Records Management Policy defines data fields
+to be hashed. `FACT` Approved Vera records are Read-Only / Delete Denied / Move
+Denied, deletion is confined to the first workflow state, and a revision
+increments a new revision rather than overwriting — so the mutability weakness
+described for Xray in §2.2 does **not** apply to Vera.
+
+Two limits remain, and they are what the reopening question in §5 was actually
+about. `UNVERIFIED` The only documented verification path is **admin-only inside
+Tricentis' own portal** — a scheduled scan with a "Re-verify" button; no
+algorithm, key custody, or published verification procedure appears anywhere in
+the doc set, and absence from documentation is not proof of absence. `FACT`
+Export carries no cryptographic material: the Record Detail Report is
+print/save-to-PDF, and the qTest-side export is status metadata only. `FACT` The
+signature binds to **record identifiers and versions — never to a build**: qTest
+Version ID, Test Case Version, Execution Log Name, Jira fields, and a
+Vera-managed integer `Revision`. No commit SHA, build number, or artifact digest
+appears in any documented field.
+
 ### 2.2 The residue after Xray is two items, and both are weak
 
 `FACT` Xray already ships four of the five steps of the surviving concept:
@@ -128,16 +151,43 @@ sold by someone, and the part that is unsold cannot be claimed truthfully.**
 
 ## 5. What would reopen this
 
-`UNVERIFIED` Two questions were left open by round 2 and are cheap to answer. If
-either resolves favourably, revisit — otherwise this decision stands:
+Both questions left open by round 2 have now been run. **The verdict is
+unchanged, but for a more precise reason than §2 originally gave.**
 
-1. **Is Vera's audit trail third-party cryptographically verifiable, or only
-   append-only inside Tricentis?** If the latter, an independently verifiable
-   attestation is still unoccupied for buyers who distrust a single vendor's log.
-   Cost: reading documentation.
-2. **Does enterprise head-SHA survival materially exceed 19.83%?** The corpus is
-   OSS and may be unrepresentative. Cost: the same ancestry test in 2–3 real
-   estates.
+**Question 2 — head-SHA survival — is closed. Not met.**
+[`.spike/recheck-sha-survival.md`](../../.spike/recheck-sha-survival.md): a more
+mature reference class (large corporate-operated OSS: Kubernetes, Spring Boot,
+VS Code, Elasticsearch, Grafana, Kafka, Angular, React, Terraform) gives `FACT`
+**25.0% pooled survival, median repo 0%**, against 19.83% / 2.0% in the original
+corpus — the same order of magnitude, with a *worse* median. `INFERENCE` The
+distribution is bimodal in both corpora: merge-commit shops preserve nearly
+everything, everyone else preserves almost nothing. A product cannot be tuned to
+a typical customer when the outcome is set by a merge-strategy toggle the vendor
+does not control. `FACT` `golang/go` returned zero merged GitHub PRs — it reviews
+via Gerrit, so even the GitHub-PR substrate is an adoption constraint.
+
+**Question 1 — Vera — reopens narrowly, and the reopening is smaller than it
+looks.** Per §2.1 as corrected: Vera hashes, verifies, and locks records, but its
+verification is vendor-internal and undocumented, its export carries no
+cryptographic material, and — the one `FACT`-grade gap — **its signature never
+binds to a build, commit, or artifact digest.**
+
+`INFERENCE` **The two answers converge, and the convergence is the real finding.**
+The single gap Vera leaves is binding evidence to *what was actually built*. The
+obvious way to fill it — key evidence to a commit SHA — is precisely what
+question 2 shows fails in three of four repositories. The design that survives
+both results is therefore neither of the ones proposed: bind evidence to a
+**content-addressed artifact digest**, which is immune to squash and rebase
+because it does not depend on commit identity at all.
+
+`INFERENCE` That is a genuinely unoccupied mechanism. It is also, on the recheck
+agent's own assessment and mine, **a feature rather than a company** — which was
+§2.1's original objection and remains unanswered. Its natural commercial form is
+sold *to or with* a test-management vendor, not against one.
+
+**The no-go therefore stands**, narrowed to this: do not build the platform, and
+do not build a Vera/Xray competitor. Record artifact-digest-bound evidence as the
+one mechanism worth revisiting, under the structural condition below.
 
 A third, structural condition: `INFERENCE` the one asymmetry no single vendor can
 close by shipping a feature is **cross-tracker, cross-repository evidence** —
