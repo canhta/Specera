@@ -61,6 +61,14 @@ source-of-truth classes and evidence strengths already modelled
 (`potpie/context-core/src/potpie_context_core/ontology.py`). It is the closest
 existing artifact to this target and it is legally reusable. Do not re-derive it.
 
+`FACT` **Scope correction, 2026-08-04:** only `context-core` is safe. potpie's
+*engine* depends on **FalkorDB, which is SSPL v1**. The reusable part is the
+pydantic-only ontology package — specifically its per-type `freshness_ttl_hours`
+and `source_of_truth` (`ontology.py:160-165`), `EVIDENCE_STRENGTHS` (`:92`), and
+the `invalid_at` supersession rule (`:200-207`) that becomes our bitemporal edge.
+`INFERENCE` Since the stack is TypeScript, this is a **port of a data model**, not
+a runtime dependency — which also sidesteps the language boundary.
+
 `INFERENCE` Extend it with the node types Graphify's own vocabulary lacks —
 `Requirement`, `AcceptanceCriterion`, `Scenario`, `Step`, `Release`, `Incident` —
 and with the `EXTRACTED`/`INFERRED`/`AMBIGUOUS` provenance enum on every edge.
@@ -70,23 +78,30 @@ is study-only** (PolyForm Noncommercial), **stakgraph is unusable** (no licence)
 **sourcebot is reject** (FSL competing-use). Anything borrowed from bloop must
 come from HEAD, never history.
 
-## 4. Build order — deterministic first
+## 4. Build order — moved and reordered
 
-`INFERENCE` Sequence by measured derivability
-([`sdlc-model.md`](sdlc-model.md) §4), not by product narrative. Each slice must
-produce a queryable graph on its own.
+**Superseded by [`../roadmap.md`](../roadmap.md).** The ordering originally given
+here has been replaced twice, and both changes are recorded rather than applied
+silently:
 
-| # | Slice | Why here | Derivability |
-|---|---|---|---|
-| 1 | **Gherkin spine** — parse feature files; `Scenario → step → test → run` | The only intent artifact with a grammar; the bridge from intent to execution | `EXTRACTED` |
-| 2 | **Delivery spine** — `PR → merge commit → release` | Highest-confidence non-code edges available | 99.5% / 92.9% |
-| 3 | **Tracker spine** — `commit/PR → work item`, `issue → epic` | Deterministic when the convention is followed | 48.1% median · 89% in Jira |
-| 4 | **Code layer** — integrate, do not build: zoekt (Apache-2.0) for lexical, serena `solidlsp` (MIT) for compiler-grade symbols | Solved elsewhere; reimplementing wastes months | `EXTRACTED` |
-| 5 | **Runtime loop** — `release → incident`, predicted vs actual impact | `FACT` No competitor does this at all | mixed |
-| 6 | **Prose tier** — Confluence, ADR, PRD | Irreducibly `INFERRED`; ship last, always labelled | `INFERRED` |
+`INFERENCE` **Platform-first, not slice-first.** This section read as though the
+platform grew incrementally. That violates the architecture rule in §1 — adding a
+connector must never change core. The platform is complete at M0; connectors plug
+in afterwards. Anything touching the data model or the trust boundary (tenancy,
+audit, provenance) is expensive to retrofit and cannot be sequenced late.
 
-`INFERENCE` Slices 1–3 are the product. Slice 5 is the differentiator nobody has.
-Slice 6 is where every competitor starts and is the reason they are mistrusted.
+`INFERENCE` **Code first, not Gherkin first.** The table here opened with a
+Gherkin spine on the grounds that it is the only intent artifact with a grammar.
+That property is real and still holds — but `FACT` 0 of 19 clones contain any
+`.feature` file. Connectors are now ordered by how reliably the source data
+exists: code (100%) → git (99.5%) → tracker (48%) → test (66%) → Gherkin
+(unmeasured) → runtime. Gherkin is a first-class connector, not the spine.
+
+`INFERENCE` The second change generalises: every intent artifact this design
+relies on — ADR, PRD, acceptance criteria, Gherkin — is absent from 100% of the
+repositories measured, with one live Jira (n=3) as the only positive evidence.
+That is carried as open questions Q1 and Q2 in the build roadmap and should be
+answered before committing to the intent tier.
 
 ## 5. Surfaces
 
@@ -126,6 +141,11 @@ proves nothing.
   measure with a real customer.
 - `UNVERIFIED` Whether `AC → Scenario` authoring is acceptable to teams as a
   human gate, or whether it is the annotation-burden problem in a new costume.
-- `FACT` Storage is undecided. Graphify's `graph.json` + NetworkX cannot serve
-  concurrent multi-user queries; Neo4j constrains self-hosting and licensing.
-  This must be settled before slice 2.
+- ~~Storage is undecided.~~ **Settled 2026-08-04** in [`stack.md`](stack.md) §1–§3:
+  relational, no graph database — `node:sqlite` in the CLI, Postgres on the
+  server, recursive CTEs, with `edges_raw` as the base table and a
+  confidence-filtered view named `edges`. `FACT` Every embedded graph database
+  failed the liveness or licence gate (Kuzu archived, Cozo dormant, Cayley dead,
+  SurrealDB/Memgraph BSL, FalkorDB SSPL, Neo4j GPL-3.0). `UNVERIFIED` The
+  remaining risk is recursive-CTE performance at 10⁶+ edges, tracked as Q3 in
+  [`../roadmap.md`](../roadmap.md).

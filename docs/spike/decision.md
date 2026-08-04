@@ -284,8 +284,15 @@ conditions: build the graph as source of truth for **edges** rather than nodes
 (nodes stay owned by Jira, GitHub and Grafana, mirrored with provenance and TTL);
 tag every edge `EXTRACTED` / `INFERRED` / `AMBIGUOUS` and **filter to
 high-confidence at query time by default**, which no engine in this spike does;
-key artifacts to the merge commit; and sequence Gherkin first, because it is the
-only mechanically parseable bridge from intent to execution.
+and key artifacts to the merge commit.
 
-Architecture and first slice: [`product-proposal.md`](product-proposal.md).
-Phasing and kill criteria: [`roadmap.md`](roadmap.md).
+`INFERENCE` **Amended 2026-08-04.** This section originally ended "and sequence
+Gherkin first, because it is the only mechanically parseable bridge from intent to
+execution." Gherkin's grammar property is real and still holds, but `FACT` 0 of 19
+clones contain any `.feature` file, so sequencing the product on it would build on
+a substrate that has never been observed. Connectors are now ordered by how
+reliably the source data exists — code (100%) first, Gherkin as connector M5 — and
+the platform itself is complete before any connector rather than growing with them.
+
+Architecture: [`product-proposal.md`](product-proposal.md). Stack:
+[`stack.md`](stack.md). Build plan and tracking: [`../roadmap.md`](../roadmap.md).

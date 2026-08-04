@@ -11,7 +11,7 @@ Every dependency below was checked for **licence (from the repo), last push, and
 
 | Area | Decision | Deciding evidence |
 |---|---|---|
-| Language | **TypeScript, Node 24 LTS**. Polyglot only across process boundaries | `FACT` `cucumber/gherkin` ships 12 implementations and **no Rust**; Gherkin is slice 1 |
+| Language | **TypeScript, Node 24 LTS**. Polyglot only across process boundaries | See the note below — the original rationale was voided by a later reordering, the decision survives on different grounds |
 | Monorepo | **pnpm workspaces. Nothing else** | `FACT` **0 of 19** clones use Nx/Turborepo/moon/Bazel/Lerna/Rush. sourcebot runs a 7-package enterprise platform on bare workspaces |
 | Storage | **Relational, no graph database.** `node:sqlite` (CLI) + PostgreSQL (server), recursive CTEs | Every embedded graph DB failed the gate — see §3 |
 | Graph API | Base table `edges_raw`; **view named `edges` is confidence-filtered** | Makes forgetting to filter impossible rather than merely discouraged |
@@ -26,6 +26,35 @@ Every dependency below was checked for **licence (from the repo), last push, and
 | Deploy | Digest-pinned Dockerfile + Compose + air-gap tarball in v1; Helm v1.1 | `FACT` **0 of 19** clones ship a `Chart.yaml` — Helm is the category's universal deferral |
 | Release | Changesets `fixed`; one GitHub Release fans out to npm + GHCR + Helm; OIDC trusted publishing | |
 | Test / lint | vitest (5/5 corpus convergence) · Biome · `tsc` project refs · zizmor/pinact/actionlint/secretlint | Workflow tooling lifted from repomix |
+
+### 1.1 Language rationale — restated 2026-08-04
+
+`INFERENCE` The original deciding evidence for TypeScript was *"`cucumber/gherkin`
+ships 12 implementations and no Rust, and Gherkin is slice 1"*. **That reasoning
+is void**: Gherkin was demoted from the first slice to connector M5 after `FACT`
+0 of 19 clones were found to contain any `.feature` file
+([`../roadmap.md`](../roadmap.md)). A conclusion whose stated reason has been
+withdrawn must be re-argued, not silently retained.
+
+Re-examined: the first connector is now **code**, and both candidate providers
+(graphify, serena `solidlsp`) are **Python** — which would argue for Python if we
+imported them. We do not; both are consumed across a process boundary, so the
+host language is unconstrained by them.
+
+TypeScript survives on three independent grounds, none of which involve Gherkin:
+
+1. `FACT` The MCP TypeScript SDK is at 1.30.0 with **no major break across 79
+   releases**, while the Python SDK is at 2.0.0 — graphify carries runtime
+   branching for the 1.x decorator vs 2.x callback API (`serve.py:1344`). MCP is
+   the primary surface, so SDK churn is a first-order risk.
+2. `FACT` `node:sqlite` gives zero-native-build installs, verified running on
+   Node v24.18.0 with no experimental warning (§2).
+3. The dashboard and API are TypeScript regardless, so a Python core would add a
+   language boundary inside our own codebase rather than at an external edge.
+
+`INFERENCE` Runner-up remains Python (uv + hatchling). What would flip it: MCP's
+Python SDK stabilising while the TS SDK churns, or a decision to import rather
+than subprocess a Python provider.
 
 ## 2. Verified working, not merely designed
 
@@ -118,7 +147,7 @@ that is how a six-connector list becomes unmaintainable.
 
 | Risk | Mitigation | Retires when |
 |---|---|---|
-| TypeScript in the graph hot path — provenance filtering is a per-edge predicate on the hottest loop | Benchmark a filtered 3-hop traversal over 10⁶ edges before slice 2; if p95 > 200 ms the problem is storage, not language | Benchmark run |
+| TypeScript in the graph hot path — provenance filtering is a per-edge predicate on the hottest loop | Benchmark a filtered 3-hop traversal over 10⁶ edges before connector M2 (tracked as Q3 in [`../roadmap.md`](../roadmap.md)); if p95 > 200 ms the problem is storage, not language | Benchmark run |
 | Two SQL dialects (SQLite + Postgres) is a permanent tax; one Postgres-only `jsonb` operator and the CLI diverges | CI conformance suite against both engines | PGlite matures enough to unify |
 | Ory Polis has had no release since v26.2.0 (2026-03-20) and its commit stream is ~80% bot | OIDC-inward boundary — swapping to Keycloak is a container change | An Ory support commitment, or the swap |
 | 9-tool cap rests on secondhand benchmark reporting | Run a 9-tool vs 17-tool variant over the same service layer, 50-question eval | Eval run |

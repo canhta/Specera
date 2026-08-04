@@ -155,13 +155,13 @@ in the spike, and [`red-team.md`](red-team.md) is instructed to attack it.
 | Verdict | Components |
 |---|---|
 | **Integrate** | zoekt (Apache-2.0) — lexical tier; serena `solidlsp` (MIT) — compiler-grade symbols; Jira's two write paths (below) — production-supported and third-party-writable, so evidence goes *into* Jira rather than a parallel link store |
-| **Borrow** | potpie's SDLC ontology (Apache-2.0) — 24 entities, 26 predicates, bitemporality, evidence strength; aider's repo-map ranking and edit-format parsers (Apache-2.0); codegraphcontext's `HEURISTIC_CALLS` type-splitting (MIT); gitdiagram's schema-constrained generation (MIT) |
+| **Borrow** | potpie's SDLC ontology — **`context-core` package only**, Apache-2.0; 24 entities, 26 predicates, bitemporality, evidence strength. `FACT` potpie's *engine* depends on **FalkorDB (SSPL v1)** and must not be pulled in. Also: aider's repo-map ranking and edit-format parsers (Apache-2.0); codegraphcontext's `HEURISTIC_CALLS` type-splitting (MIT); gitdiagram's schema-constrained generation (MIT) |
 | **Study only** | GitNexus (PolyForm Noncommercial) — best-engineered graph in the set, 46 node labels with real C++ ADL and DI resolution, legally untouchable |
 | **Reject** | sourcebot (FSL, competing-use clause); stakgraph (no LICENSE — all rights reserved); opengrok (CDDL entanglement) |
 
 `INFERENCE` The best graph engineering in the category is unusable IP and the
 best SDLC ontology is freely reusable — so Specera should reimplement the
-resolver and adopt potpie's ontology, not the reverse.
+resolver and adopt potpie's `context-core` ontology, not the reverse.
 
 **Jira has two distinct write paths, and the difference matters.** `FACT`
 (both verified HTTP 200, 2026-08-04): the **Development Information API**
